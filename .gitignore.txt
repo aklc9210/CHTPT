@@ -1,0 +1,18 @@
+# Build outputs của tất cả subfolder
+**/bin/
+**/obj/
+
+# Thư mục .vs của Visual Studio
+.vs/
+
+# File cấu hình người dùng
+*.user
+*.suo
+
+# NuGet packages
+**/packages/
+*.nupkg
+
+# Hệ điều hành / file tạm
+*.DS_Store
+Thumbs.db
