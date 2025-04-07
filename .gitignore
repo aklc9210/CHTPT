@@ -1,18 +1,52 @@
-# Build outputs của tất cả subfolder
-**/bin/
-**/obj/
+# --- CR temp folder (the one you pointed out) ---
+.cr/
 
-# Thư mục .vs của Visual Studio
+# --- Visual Studio workspace files ---
 .vs/
-
-# File cấu hình người dùng
-*.user
 *.suo
+*.user
+*.userosscache
+*.sln.docstates
 
-# NuGet packages
-**/packages/
+# --- VS Code settings ---
+.vscode/
+
+# --- Build output ---
+[Bb]in/
+[Oo]bj/
+
+# --- NuGet ---
+packages/
 *.nupkg
+project.lock.json
+project.fragment.lock.json
 
-# Hệ điều hành / file tạm
-*.DS_Store
+# --- Rider ---
+.idea/
+
+# --- ReSharper ---
+_ReSharper*/
+*.DotSettings.user
+
+# --- EF Migrations ---
+Migrations/
+
+# --- IIS Express ---
+IISExpress/
+.vs/config/
+
+# --- Publish/Web deploy ---
+publish/
+*.Publish.xml
+
+# --- Logs & DB backups ---
+*.log
+*.mdf
+*.ldf
+*.bak
+
+# --- OS generated ---
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
