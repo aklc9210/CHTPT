@@ -142,22 +142,22 @@ Dựa trên việc xem qua các file code của dự án, ta có thể mô tả 
 ## Các Công Nghệ Sử Dụng
 
 - **.NET Framework & C#**  
-  Dự án được xây dựng trên nền tảng .NET Framework sử dụng ngôn ngữ C#. Các ứng dụng của Coordinator, Database Server và Client đều được phát triển dưới dạng Windows Forms (WinForms) nhằm tạo giao diện người dùng trực quan. (citeturn1file0, citeturn1file6)
+  Dự án được xây dựng trên nền tảng .NET Framework sử dụng ngôn ngữ C#. Các ứng dụng của Coordinator, Database Server và Client đều được phát triển dưới dạng Windows Forms (WinForms) nhằm tạo giao diện người dùng trực quan. 
 
 - **DevExpress**  
-  Các giao diện chính được xây dựng bằng DevExpress – một bộ thư viện UI mạnh mẽ giúp tạo các form hiện đại và dễ sử dụng. Điều này được thể hiện rõ qua các file như CoordinatorForm.cs và ClientForm.cs. (citeturn1file0, citeturn1file6)
+  Các giao diện chính được xây dựng bằng DevExpress – một bộ thư viện UI mạnh mẽ giúp tạo các form hiện đại và dễ sử dụng. Điều này được thể hiện rõ qua các file như CoordinatorForm.cs và ClientForm.cs. 
 
 - **HttpListener & RESTful API**  
-  Các ứng dụng Coordinator và Database Server sử dụng `HttpListener` để mở cổng HTTP và lắng nghe các yêu cầu từ client. Các endpoint RESTful như `/request_access`, `/release_access`, `/notify_access`, `/data` và `/release` được định nghĩa để xử lý việc yêu cầu cấp, truy xuất dữ liệu và giải phóng kết nối. (citeturn1file0, citeturn1file2, citeturn1file4)
+  Các ứng dụng Coordinator và Database Server sử dụng `HttpListener` để mở cổng HTTP và lắng nghe các yêu cầu từ client. Các endpoint RESTful như `/request_access`, `/release_access`, `/notify_access`, `/data` và `/release` được định nghĩa để xử lý việc yêu cầu cấp, truy xuất dữ liệu và giải phóng kết nối. 
 
 - **Newtonsoft.Json**  
   Việc chuyển đổi giữa đối tượng C# và định dạng JSON được thực hiện thông qua thư viện Newtonsoft.Json. Điều này giúp trao đổi dữ liệu giữa các thành phần của hệ thống trở nên dễ dàng và chuẩn hóa. (citeturn1file0, citeturn1file6)
 
 - **Asynchronous Programming & Multithreading**  
-  Các thao tác bất đồng bộ (async/await) được sử dụng để xử lý các request HTTP và thực hiện cập nhật trạng thái trong nền, đảm bảo giao diện người dùng luôn phản hồi nhanh. Đồng thời, việc sử dụng `Task.Run` và `CancellationToken` giúp quản lý đa luồng khi lắng nghe và xử lý các request từ HttpListener. (citeturn1file0, citeturn1file2)
+  Các thao tác bất đồng bộ (async/await) được sử dụng để xử lý các request HTTP và thực hiện cập nhật trạng thái trong nền, đảm bảo giao diện người dùng luôn phản hồi nhanh. Đồng thời, việc sử dụng `Task.Run` và `CancellationToken` giúp quản lý đa luồng khi lắng nghe và xử lý các request từ HttpListener.
 
 - **Socket.IO (Dashboard Web)**  
-  Mặc dù phần giao diện dashboard được xây dựng bằng HTML/Bootstrap và sử dụng Socket.IO để cập nhật trạng thái thời gian thực, nhưng phần code chủ yếu của dự án vẫn tập trung vào giao tiếp qua RESTful API giữa các ứng dụng client, coordinator và database server. (citeturn0file4)
+  Mặc dù phần giao diện dashboard được xây dựng bằng HTML/Bootstrap và sử dụng Socket.IO để cập nhật trạng thái thời gian thực, nhưng phần code chủ yếu của dự án vẫn tập trung vào giao tiếp qua RESTful API giữa các ứng dụng client, coordinator và database server.
 
 ---
 
@@ -171,20 +171,20 @@ Dựa trên việc xem qua các file code của dự án, ta có thể mô tả 
 2. **Yêu Cầu Truy Cập:**
    - Client gửi một request POST đến endpoint `/request_access` của Coordinator, kèm theo thông tin ClientID.
    - Coordinator nhận request, kiểm tra trạng thái các Database Server (đã có client nào kết nối chưa, server có đang bận hay không). Nếu client đã được kết nối với một server thì trả về thông báo lỗi (409 Conflict); nếu tất cả server đang bận thì trả về mã lỗi 503.
-   - Nếu có server rảnh, Coordinator sẽ chọn server dựa trên thuật toán (chọn server có thời gian LastAccess nhỏ nhất) và cập nhật trạng thái của server đó, sau đó gọi endpoint `/notify_access` trên Database Server để thông báo về client sắp kết nối. (citeturn1file0)
+   - Nếu có server rảnh, Coordinator sẽ chọn server dựa trên thuật toán (chọn server có thời gian LastAccess nhỏ nhất) và cập nhật trạng thái của server đó, sau đó gọi endpoint `/notify_access` trên Database Server để thông báo về client sắp kết nối.
 
 3. **Truy Xuất Dữ Liệu:**
    - Sau khi nhận thông báo từ Coordinator, Client sẽ lấy thông tin của Database Server (server_id, server_name, server_url).
    - Client sử dụng HttpClient để gửi yêu cầu GET đến endpoint `/data` của Database Server, kèm header “X-Client-ID” xác thực.
-   - Database Server kiểm tra ClientID trong header so với client đã được gán (currentClient). Nếu khớp, server trả về dữ liệu mẫu kèm theo timestamp; nếu không, trả về lỗi 403 Forbidden. (citeturn1file2, citeturn1file4)
+   - Database Server kiểm tra ClientID trong header so với client đã được gán (currentClient). Nếu khớp, server trả về dữ liệu mẫu kèm theo timestamp; nếu không, trả về lỗi 403 Forbidden. 
 
 4. **Giải Phóng Quyền Truy Cập:**
    - Khi client không cần sử dụng dữ liệu nữa, nó sẽ gửi request POST đến endpoint `/release_access` của Coordinator.
    - Coordinator tìm kiếm và giải phóng server đang được gán cho client đó, cập nhật trạng thái (đánh dấu server là rảnh) và gọi endpoint `/release` trên Database Server để thông báo giải phóng.
-   - Sau khi giải phóng, trạng thái mới của các server được cập nhật và hiển thị lại trên dashboard của Coordinator. (citeturn1file0, citeturn1file6)
+   - Sau khi giải phóng, trạng thái mới của các server được cập nhật và hiển thị lại trên dashboard của Coordinator.
 
 5. **Cập Nhật và Giám Sát:**
    - Các ứng dụng sử dụng Timer và đa luồng để cập nhật trạng thái server theo thời gian thực. Coordinator thường xuyên refresh dữ liệu hiển thị trên DataGridView và gửi thông báo cho người dùng qua danh sách thông báo.
-   - Dashboard web sử dụng Socket.IO để nhận các thông báo và cập nhật giao diện cho người dùng trong thời gian thực. (citeturn0file4)
+   - Dashboard web sử dụng Socket.IO để nhận các thông báo và cập nhật giao diện cho người dùng trong thời gian thực.
 
 
