@@ -16,10 +16,6 @@ namespace Database2ServerApp
         {
             int serverId = 2;
             int port = 5002;
-            /* if (args.Length >= 1 && int.TryParse(args[0], out int id))
-                 serverId = id;
-             if (args.Length >= 2 && int.TryParse(args[1], out int p))
-                 port = p;*/
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);

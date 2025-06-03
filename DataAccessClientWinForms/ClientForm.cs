@@ -16,7 +16,11 @@ namespace DataAccessClientWinForms
     public partial class ClientForm : DevExpress.XtraEditors.XtraForm
     {
         private string clientId = "";
-        private string coordinatorUrl = "http://192.168.214.103:5000";
+/*        private string coordinatorUrl = "http://192.168.214.103:5000";*/
+        private string coordinatorUrl = "http://localhost:5000";
+
+        private System.Windows.Forms.Timer timerCheckLock;
+
         public ClientForm()
         {
             InitializeComponent();
@@ -52,6 +56,15 @@ namespace DataAccessClientWinForms
                         JObject resp = JObject.Parse(jsonString);
                         lblAssignedServer.Text = $"Được phân bổ: {resp["server_name"]}";
                         string serverUrl = resp["server_url"].ToString();
+
+                        if (timerCheckLock == null)
+                        {
+                            timerCheckLock = new System.Windows.Forms.Timer();
+                            timerCheckLock.Interval = 1000; // 5 giây một lần
+                            timerCheckLock.Tick += TimerCheckLock_Tick;
+                        }
+                        timerCheckLock.Start();
+
                         httpClient.DefaultRequestHeaders.Remove("X-Client-ID");
                         httpClient.DefaultRequestHeaders.Add("X-Client-ID", clientId);
                         var dataResp = await httpClient.GetAsync(serverUrl + "/data");
@@ -134,6 +147,11 @@ namespace DataAccessClientWinForms
                     if (response.IsSuccessStatusCode)
                     {
                         MessageBox.Show("Đã giải phóng quyền truy cập.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                        // Sau khi release xong, dừng timerCheckLock
+                        timerCheckLock?.Stop();
+
+                        // Cập nhật UI
                         lblAssignedServer.Text = "Chưa có server";
                         txtDataDisplay.Clear();
                     }
@@ -149,6 +167,64 @@ namespace DataAccessClientWinForms
                 MessageBox.Show("Lỗi: " + ex.Message, "Exception", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        private async void TimerCheckLock_Tick(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(clientId) || lblAssignedServer.Text == "Chưa có server")
+                return;
+
+            try
+            {
+                using (var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) })
+                {
+                    // Tạo url kiểm tra trạng thái
+                    string url = $"{coordinatorUrl}/check_lock_status?client_id={Uri.EscapeDataString(clientId)}";
+                    var response = await httpClient.GetAsync(url);
+                    if (!response.IsSuccessStatusCode)
+                        return;
+
+                    string json = await response.Content.ReadAsStringAsync();
+                    var obj = JObject.Parse(json);
+                    bool holding = obj["holding"].Value<bool>();
+                    bool forced = obj["forced_released"].Value<bool>();
+
+
+                    if (!holding && lblAssignedServer.Text.StartsWith("Được phân bổ"))
+                    {
+                        // Dừng timer
+                        timerCheckLock.Stop();
+
+                        // Nếu forced == true → DataServer sập đang buộc thu hồi lock
+                        if (forced)
+                        {
+                            MessageBox.Show(
+                                "Quyền truy cập của bạn đã bị thu hồi (DataServer sập).",
+                                "Thông báo",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning);
+                        }
+                        else
+                        {
+                            // Nếu forced = false nhưng holding = false: client đã release bình thường hoặc không được cấp lock
+                            MessageBox.Show(
+                                "Bạn đã mất quyền truy cập.",
+                                "Thông báo",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Information);
+                        }
+
+                        // Cập nhật UI của client về trạng thái “Chưa có server”
+                        lblAssignedServer.Text = "Chưa có server";
+                        txtDataDisplay.Clear();
+                    }
+                }
+            }
+            catch
+            {
+                // Nếu không thể kết nối tới Coordinator, lần sau vẫn thử lại
+            }
+        }
+
 
     }
 }

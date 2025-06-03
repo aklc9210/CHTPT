@@ -54,6 +54,18 @@ namespace Database2ServerApp
 
         private void Database2ServerForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (!string.IsNullOrWhiteSpace(currentClient))
+            {
+                // Nếu đang có client truy cập → hiển thị cảnh báo và hủy đóng form
+                MessageBox.Show(
+                    $"Không thể tắt DataServer {serverId} vì đang có client {currentClient} đang truy cập.",
+                    "Cảnh báo",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                e.Cancel = true; // Ngăn việc đóng cửa sổ
+                return;
+            }
+
             cts.Cancel();
             if (httpListener != null && httpListener.IsListening)
                 httpListener.Stop();
@@ -99,6 +111,21 @@ namespace Database2ServerApp
             {
                 string rawUrl = context.Request.RawUrl;
                 string method = context.Request.HttpMethod;
+
+                if (rawUrl.StartsWith("/server_status") && method == "GET")
+                {
+                    var respObj = new { status = "ok", server_id = serverId };
+                    string respJson = JsonConvert.SerializeObject(respObj);
+
+                    context.Response.StatusCode = 200;
+                    context.Response.ContentType = "application/json";
+                    byte[] buffer = Encoding.UTF8.GetBytes(respJson);
+                    context.Response.ContentLength64 = buffer.Length;
+                    await context.Response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                    context.Response.Close();
+                    return;
+                }
+
                 if (rawUrl.StartsWith("/notify_access") && method == "POST")
                 {
                     await HandleNotifyAccess(context);

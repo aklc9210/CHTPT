@@ -54,6 +54,18 @@ namespace Database1ServerApp
 
         private void DatabaseServerForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (!string.IsNullOrWhiteSpace(currentClient))
+            {
+                // Nếu đang có client truy cập → hiển thị cảnh báo và hủy đóng form
+                MessageBox.Show(
+                    $"Không thể tắt DataServer {serverId} vì đang có client {currentClient} đang truy cập.",
+                    "Cảnh báo",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                e.Cancel = true; // Ngăn việc đóng cửa sổ
+                return;
+            }
+
             cts.Cancel();
             if (httpListener != null && httpListener.IsListening)
                 httpListener.Stop();
@@ -63,7 +75,7 @@ namespace Database1ServerApp
         private async Task StartHttpListener(CancellationToken token)
         {
             httpListener = new HttpListener();
-            string listenUrl = $"http://+: {port}/"; // Lưu ý: đảm bảo không có khoảng trắng
+            string listenUrl;
             listenUrl = $"http://+:{port}/";
             httpListener.Prefixes.Add(listenUrl);
             try
@@ -99,6 +111,21 @@ namespace Database1ServerApp
             {
                 string rawUrl = context.Request.RawUrl;
                 string method = context.Request.HttpMethod;
+
+                if (rawUrl.StartsWith("/server_status") && method == "GET")
+                {
+                    var respObj = new { status = "ok", server_id = serverId };
+                    string respJson = JsonConvert.SerializeObject(respObj);
+
+                    context.Response.StatusCode = 200;
+                    context.Response.ContentType = "application/json";
+                    byte[] buffer1 = Encoding.UTF8.GetBytes(respJson);  // <-- trùng tên buffer
+                    context.Response.ContentLength64 = buffer1.Length;
+                    await context.Response.OutputStream.WriteAsync(buffer1, 0, buffer1.Length);
+                    context.Response.Close();
+                    return;
+                }
+
                 if (rawUrl.StartsWith("/notify_access") && method == "POST")
                 {
                     await HandleNotifyAccess(context);

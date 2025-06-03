@@ -20,7 +20,6 @@ namespace CoordinatorApp
         public CoordinatorForm()
         {
             InitializeComponent();
-            InitializeServerState();
         }
 
         // HttpListener để lắng nghe các request
@@ -34,6 +33,12 @@ namespace CoordinatorApp
         // Danh sách các database server
         private List<DatabaseServer> servers;
 
+        // Thêm biến timer kiểm tra tình trạng của DataServer
+        private System.Windows.Forms.Timer timerHealthCheck;
+
+        // Danh sách lưu biến cần release nếu server bị sập
+        private readonly HashSet<string> forcedReleasedClients = new HashSet<string>();
+
         // Khởi tạo danh sách server mẫu
         private void InitializeServerState()
         {
@@ -43,19 +48,21 @@ namespace CoordinatorApp
                 {
                     Id = 1,
                     Name = "Database Server 1",
-                    Url = "http://192.168.214.103:5001",
+                    Url = "http://localhost:5001",
                     Busy = false,
                     CurrentClient = "",
-                    LastAccess = DateTime.MinValue
+                    LastAccess = DateTime.MinValue,
+                    IsAlive = false
                 },
                 new DatabaseServer
                 {
                     Id = 2,
                     Name = "Database Server 2",
-                    Url = "http://192.168.214.103:5002",
+                    Url = "http://localhost:5002",
                     Busy = false,
                     CurrentClient = "",
-                    LastAccess = DateTime.MinValue
+                    LastAccess = DateTime.MinValue,
+                    IsAlive = false
                 }
             };
         }
@@ -74,8 +81,11 @@ namespace CoordinatorApp
         }
 
 
-        private void CoordinatorForm_Load(object sender, EventArgs e)
+        private async void CoordinatorForm_Load(object sender, EventArgs e)
         {
+            InitializeServerState();
+            await CheckAllServersAlive();
+
             // Khởi động HttpListener trên thread riêng
             cts = new CancellationTokenSource();
             Task.Run(() => StartHttpListener(cts.Token));
@@ -83,10 +93,28 @@ namespace CoordinatorApp
 
             AddNotification("Coordinator khởi động thành công.", "info");
 
-            // Khởi động timer để cập nhật dashboard (DataGridView)
-            /*timerFresher.Interval = 5000;
-            timerFresher.Tick += TimerRefresh_Tick;
-            timerFresher.Start();*/
+            // Khởi tạo và start health-check timer để kiểm tra xem dataserver có đột ngột ngừng hoạt động không
+            timerHealthCheck = new System.Windows.Forms.Timer();
+            timerHealthCheck.Interval = 1000; // 1 giây
+            timerHealthCheck.Tick += TimerHealthCheck_Tick;
+            timerHealthCheck.Start();
+        }
+
+        private async void TimerHealthCheck_Tick(object sender, EventArgs e)
+        {
+            foreach (var server in servers)
+            {
+                bool wasAlive = server.IsAlive;
+                await CheckServerAlive(server);
+
+                if (wasAlive && !server.IsAlive)
+                {
+                    AddNotification(
+                        $"{server.Name} đã ngắt kết nối bất ngờ.",
+                        "error");
+                }
+            }
+            UpdateServerGrid();
         }
 
         private void TimerRefresh_Tick(object sender, EventArgs e)
@@ -107,7 +135,14 @@ namespace CoordinatorApp
             {
                 foreach (var server in servers)
                 {
-                    string state = server.Busy ? "Đang bận" : "Sẵn sàng";
+                    string state;
+                    if (!server.IsAlive)
+                        state = "Chưa khởi tạo";
+                    else if (server.Busy)
+                        state = "Đang bận";
+                    else
+                        state = "Sẵn sàng";
+
                     string lastAccess = server.LastAccess == DateTime.MinValue ? "" : server.LastAccess.ToString("HH:mm:ss");
                     dataGridViewServers.Rows.Add(server.Id, server.Name, server.Url, state, server.CurrentClient, lastAccess);
                 }
@@ -173,6 +208,11 @@ namespace CoordinatorApp
                 {
                     responseString = GetServerStatusJson();
                 }
+                else if (rawUrl.StartsWith("/check_lock_status") && method == "GET")
+                {
+                    await HandleCheckLockStatus(context);
+                    return;
+                }
                 else
                 {
                     statusCode = 404;
@@ -194,6 +234,36 @@ namespace CoordinatorApp
                 await output.WriteAsync(buffer, 0, buffer.Length);
             }
         }
+
+        // Xử lý GET /check_lock_status?client_id=...
+        private async Task HandleCheckLockStatus(HttpListenerContext context)
+        {
+            string clientId = context.Request.QueryString["client_id"];
+            bool holding = false;
+            bool forced = false;
+
+            lock (stateLock)
+            {
+                // Xem client này còn giữ lock ở bất kỳ server nào không
+                holding = servers.Any(s => s.CurrentClient == clientId);
+
+                // Xem client này có trong forcedReleasedClients không
+                forced = forcedReleasedClients.Contains(clientId);
+                if (forced)
+                    forcedReleasedClients.Remove(clientId);
+            }
+
+            var respObj = new { holding = holding, forced_released = forced };
+            string respJson = JsonConvert.SerializeObject(respObj);
+
+            context.Response.StatusCode = 200;
+            context.Response.ContentType = "application/json";
+            byte[] buffer = Encoding.UTF8.GetBytes(respJson);
+            context.Response.ContentLength64 = buffer.Length;
+            await context.Response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+            context.Response.Close();
+        }
+
 
         // Xử lý POST /request_access
         private async Task HandleRequestAccess(HttpListenerContext context)
@@ -236,24 +306,27 @@ namespace CoordinatorApp
                     WriteResponse(context, JsonConvert.SerializeObject(respConflict)).Wait();
                     return;
                 }
+
                 // Kiểm tra số lượng server bận
-                int busyCount = 0;
+                int unavailableCount = 0;
                 foreach (var server in servers)
                 {
-                    if (server.Busy)
-                        busyCount++;
+                    if (server.Busy || !server.IsAlive)
+                        unavailableCount++;
                 }
-                if (busyCount >= servers.Count)
+
+                if (unavailableCount >= servers.Count)
                 {
                     context.Response.StatusCode = 503;
                     var respBusy = new
                     {
-                        error = "All database servers are busy",
-                        message = "Tất cả các database server đang bận."
+                        error = "Cảnh báo: ",
+                        message = "Tất cả các database server đều đang bận hoặc chưa khởi tạo."
                     };
                     WriteResponse(context, JsonConvert.SerializeObject(respBusy)).Wait();
                     return;
                 }
+
                 // Chọn server rảnh, nếu có nhiều, chọn server có LastAccess nhỏ nhất
                 List<DatabaseServer> available = servers.FindAll(s => !s.Busy);
                 assignedServer = available[0];
@@ -462,10 +535,64 @@ namespace CoordinatorApp
         {
             AddNotification("Đã cập nhật URL: " + txtCoordinatorUrl.Text.Trim(), "success");
         }
+
+        private async Task CheckAllServersAlive()
+        {
+            List<Task> tasks = new List<Task>();
+            foreach (var server in servers)
+            {
+                tasks.Add(CheckServerAlive(server));
+            }
+            await Task.WhenAll(tasks);
+            UpdateServerGrid(); // Cập nhật UI sau khi kiểm tra xong
+        }
+
+        private async Task CheckServerAlive(DatabaseServer server)
+        {
+            try
+            {
+                using (var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) })
+                {
+                    // Gửi GET để kiểm tra, ví dụ: GET /server_status
+                    var response = await httpClient.GetAsync(server.Url + "/server_status");
+                    server.IsAlive = response.IsSuccessStatusCode;
+                }
+            }
+            catch
+            {
+                server.IsAlive = false;
+            }
+
+            // Nếu server không alive, đảm bảo Busy=false, CurrentClient="" để tránh nhầm lẫn
+            if (!server.IsAlive)
+            {
+                string oldClient = null;
+                lock (stateLock)
+                {
+                    if (!string.IsNullOrWhiteSpace(server.CurrentClient))
+                    {
+                        oldClient = server.CurrentClient;
+                        server.CurrentClient = "";
+                        server.Busy = false;
+                        server.LastAccess = DateTime.MinValue;
+                    }
+                }
+
+                if (oldClient != null)
+                {
+                    forcedReleasedClients.Add(oldClient);
+                    AddNotification(
+                        $"{server.Name} sập khi client {oldClient} vẫn giữ lock.",
+                        "error");
+                }
+            }
+
+        }
+
     }
 
-    // Các lớp mô tả request JSON
-    public class RequestAccessRequest
+// Các lớp mô tả request JSON
+public class RequestAccessRequest
     {
         public string client_id { get; set; }
     }
@@ -484,6 +611,8 @@ namespace CoordinatorApp
         public bool Busy { get; set; }
         public string CurrentClient { get; set; }
         public DateTime LastAccess { get; set; }
+
+        public bool IsAlive { get; set; } // kiểm tra trạng thái db có đang chạy chưa
     }
 
 }
