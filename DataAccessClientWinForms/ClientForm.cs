@@ -24,6 +24,10 @@ namespace DataAccessClientWinForms
         public ClientForm()
         {
             InitializeComponent();
+
+            // Khời tạo id của client từ ban đầu
+            clientId = Guid.NewGuid().ToString().Substring(0, 8);
+            txtClientId.Text = clientId;
         }
 
 
@@ -105,8 +109,8 @@ namespace DataAccessClientWinForms
 
         private void btnGenerateId_Click(object sender, EventArgs e)
         {
-            clientId = Guid.NewGuid().ToString().Substring(0, 8);
-            txtClientId.Text = clientId;
+            //clientId = Guid.NewGuid().ToString().Substring(0, 8);
+            //txtClientId.Text = clientId;
         }
 
         private void ClientForm_Load(object sender, EventArgs e)
