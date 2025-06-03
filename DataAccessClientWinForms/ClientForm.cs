@@ -16,10 +16,14 @@ namespace DataAccessClientWinForms
     public partial class ClientForm : DevExpress.XtraEditors.XtraForm
     {
         private string clientId = "";
-        private string coordinatorUrl = "http://192.168.214.103:5000";
+        private string coordinatorUrl = "http://192.168.230.103:5000";
         public ClientForm()
         {
             InitializeComponent();
+
+            // Khời tạo id của client từ ban đầu
+            clientId = Guid.NewGuid().ToString().Substring(0, 8);
+            txtClientId.Text = clientId;
         }
 
 
@@ -92,8 +96,8 @@ namespace DataAccessClientWinForms
 
         private void btnGenerateId_Click(object sender, EventArgs e)
         {
-            clientId = Guid.NewGuid().ToString().Substring(0, 8);
-            txtClientId.Text = clientId;
+            //clientId = Guid.NewGuid().ToString().Substring(0, 8);
+            //txtClientId.Text = clientId;
         }
 
         private void ClientForm_Load(object sender, EventArgs e)
