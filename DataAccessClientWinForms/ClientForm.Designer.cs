@@ -30,7 +30,6 @@
         {
             this.lblClientId = new DevExpress.XtraEditors.LabelControl();
             this.txtClientId = new DevExpress.XtraEditors.TextEdit();
-            this.btnGenerateId = new System.Windows.Forms.Button();
             this.lblCoordinatorUrl = new DevExpress.XtraEditors.LabelControl();
             this.txtCoordinatorUrl = new DevExpress.XtraEditors.TextEdit();
             this.btnRequestAccess = new System.Windows.Forms.Button();
@@ -63,19 +62,8 @@
             this.txtClientId.Name = "txtClientId";
             this.txtClientId.Properties.Appearance.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(163)));
             this.txtClientId.Properties.Appearance.Options.UseFont = true;
-            this.txtClientId.Size = new System.Drawing.Size(237, 34);
+            this.txtClientId.Size = new System.Drawing.Size(405, 34);
             this.txtClientId.TabIndex = 1;
-            // 
-            // btnGenerateId
-            // 
-            this.btnGenerateId.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(163)));
-            this.btnGenerateId.Location = new System.Drawing.Point(484, 37);
-            this.btnGenerateId.Name = "btnGenerateId";
-            this.btnGenerateId.Size = new System.Drawing.Size(138, 47);
-            this.btnGenerateId.TabIndex = 2;
-            this.btnGenerateId.Text = "Tạo ID";
-            this.btnGenerateId.UseVisualStyleBackColor = true;
-            this.btnGenerateId.Click += new System.EventHandler(this.btnGenerateId_Click);
             // 
             // lblCoordinatorUrl
             // 
@@ -122,7 +110,7 @@
             // 
             this.lblAssignedServer.Appearance.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(163)));
             this.lblAssignedServer.Appearance.Options.UseFont = true;
-            this.lblAssignedServer.Location = new System.Drawing.Point(215, 37);
+            this.lblAssignedServer.Location = new System.Drawing.Point(144, 37);
             this.lblAssignedServer.Name = "lblAssignedServer";
             this.lblAssignedServer.Size = new System.Drawing.Size(128, 28);
             this.lblAssignedServer.TabIndex = 7;
@@ -147,7 +135,6 @@
             this.panelControl1.Controls.Add(this.btnReleaseAccess);
             this.panelControl1.Controls.Add(this.txtClientId);
             this.panelControl1.Controls.Add(this.btnRequestAccess);
-            this.panelControl1.Controls.Add(this.btnGenerateId);
             this.panelControl1.Dock = System.Windows.Forms.DockStyle.Left;
             this.panelControl1.Location = new System.Drawing.Point(0, 0);
             this.panelControl1.Name = "panelControl1";
@@ -191,7 +178,6 @@
 
         private DevExpress.XtraEditors.LabelControl lblClientId;
         private DevExpress.XtraEditors.TextEdit txtClientId;
-        private System.Windows.Forms.Button btnGenerateId;
         private DevExpress.XtraEditors.LabelControl lblCoordinatorUrl;
         private DevExpress.XtraEditors.TextEdit txtCoordinatorUrl;
         private System.Windows.Forms.Button btnRequestAccess;
