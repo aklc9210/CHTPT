@@ -119,9 +119,9 @@ namespace Database2ServerApp
 
                     context.Response.StatusCode = 200;
                     context.Response.ContentType = "application/json";
-                    byte[] buffer = Encoding.UTF8.GetBytes(respJson);
-                    context.Response.ContentLength64 = buffer.Length;
-                    await context.Response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                    byte[] buffer1 = Encoding.UTF8.GetBytes(respJson);
+                    context.Response.ContentLength64 = buffer1.Length;
+                    await context.Response.OutputStream.WriteAsync(buffer1, 0, buffer1.Length);
                     context.Response.Close();
                     return;
                 }
