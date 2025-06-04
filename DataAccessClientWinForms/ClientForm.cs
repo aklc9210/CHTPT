@@ -28,6 +28,7 @@ namespace DataAccessClientWinForms
             // Khời tạo id của client từ ban đầu
             clientId = Guid.NewGuid().ToString().Substring(0, 8);
             txtClientId.Text = clientId;
+            txtClientId.Properties.ReadOnly = true;
         }
 
 
